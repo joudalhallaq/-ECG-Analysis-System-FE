@@ -98,8 +98,6 @@ button {
   display: block;
 }
 
-/* لو بدك الصورة كاملة بدون قص، بدلي cover بـ contain فوق */
-
 .auth-form-side {
   display: flex;
   align-items: center;
@@ -551,8 +549,7 @@ button {
   font-size: 23px;
 }
 
-.explanation-box,
-.signal-card {
+.explanation-box {
   background: rgba(255, 250, 246, 0.75);
   border: 1px solid rgba(199, 183, 163, 0.75);
   border-radius: 22px;
@@ -560,8 +557,7 @@ button {
   margin-bottom: 22px;
 }
 
-.explanation-box h4,
-.signal-card h4 {
+.explanation-box h4 {
   color: var(--primary-dark);
   margin-top: 0;
 }
@@ -572,31 +568,80 @@ button {
   border-top: 1px solid rgba(199, 183, 163, 0.65);
 }
 
+/* =========================
+   CLEAR ECG CHART
+========================= */
+
+.signal-card {
+  background: rgba(255, 250, 246, 0.82);
+  border: 1px solid rgba(199, 183, 163, 0.85);
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 22px;
+}
+
+.signal-card h4 {
+  color: var(--primary-dark);
+  margin: 0 0 18px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.ecg-chart-wrapper {
+  width: 100%;
+  height: 340px;
+  background: #fffaf6;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(109, 41, 50, 0.03);
+}
+
+.ecg-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #fffaf6;
+  border: none;
+  border-radius: 22px;
+}
+
+.ecg-bg {
+  fill: #fffaf6;
+}
+
+.ecg-grid-line {
+  stroke: rgba(199, 183, 163, 0.55);
+  stroke-width: 1;
+}
+
+.ecg-mid-line {
+  stroke: rgba(109, 41, 50, 0.35);
+  stroke-width: 1.5;
+  stroke-dasharray: 8 8;
+}
+
+.ecg-polyline {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
 .ecg-placeholder {
-  min-height: 200px;
+  width: 100%;
+  height: 340px;
   border: 2px dashed var(--border);
-  border-radius: 18px;
+  border-radius: 22px;
   background: #fffaf6;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--muted);
   text-align: center;
-  padding: 20px;
-}
-
-.ecg-svg {
-  width: 100%;
-  height: 230px;
-  border-radius: 18px;
-  background: #fffaf6;
-  border: 1px solid var(--border);
-}
-
-.ecg-svg polyline {
-  stroke: var(--primary);
-  stroke-linejoin: round;
-  stroke-linecap: round;
+  padding: 22px;
+  line-height: 1.7;
 }
 
 /* =========================
@@ -704,36 +749,9 @@ button {
   .action-buttons button {
     width: 100%;
   }
-}
-.ecg-chart-wrap {
-  width: 100%;
-  min-height: 230px;
-}
 
-.ecg-svg {
-  width: 100%;
-  height: 230px;
-  border-radius: 18px;
-  background: #fffaf6;
-  border: 1px solid var(--border);
-  display: block;
-}
-
-.ecg-svg polyline {
-  stroke: #6d2932;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-.ecg-placeholder {
-  min-height: 230px;
-  border: 2px dashed var(--border);
-  border-radius: 18px;
-  background: #fffaf6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  text-align: center;
-  padding: 20px;
+  .ecg-chart-wrapper,
+  .ecg-placeholder {
+    height: 260px;
+  }
 }
