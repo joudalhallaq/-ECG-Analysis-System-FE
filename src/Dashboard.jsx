@@ -30,6 +30,7 @@ function Dashboard() {
     }
 
     fetchRecords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const normalizedRecords = useMemo(() => {
@@ -201,6 +202,7 @@ function Dashboard() {
       setSelectedRecord({
         ...record,
         ...response.data,
+        id: response.data?.id || response.data?.record_id || record.id,
         short_explanation:
           response.data?.short_explanation ||
           record.short_explanation ||
@@ -216,8 +218,11 @@ function Dashboard() {
         signal_values: response.data?.signal_values || record.signal_values || [],
       });
     } catch (error) {
+      console.error("View result error:", error);
+
       setSelectedRecord({
         ...record,
+        id: record.id,
         short_explanation:
           record.short_explanation || "No short explanation is available yet.",
         detailed_explanation:
@@ -255,52 +260,48 @@ function Dashboard() {
     }
   };
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     if (!selectedRecord) {
       setMessage("No analysis result available for report generation.");
       return;
     }
 
-    const condition = selectedRecord.predicted_condition || "Not available";
-    const confidence =
-      selectedRecord.confidence !== undefined && selectedRecord.confidence !== null
-        ? `${Math.round(Number(selectedRecord.confidence) * 100)}%`
-        : "Not available";
+    const recordId = selectedRecord.id || selectedRecord.record_id;
 
-    const reportText = `
-ECG ANALYSIS REPORT
+    if (!recordId) {
+      setMessage("Record ID is missing. Please click View Result again.");
+      return;
+    }
 
-Patient/User: ${username || "User"}
-Record ID: ${selectedRecord.id || "N/A"}
-Predicted Condition: ${condition}
-Confidence: ${confidence}
+    try {
+      const response = await API.get(`/ecg/report/${recordId}/`, {
+        responseType: "blob",
+      });
 
-Short Explanation:
-${selectedRecord.short_explanation || "Not available"}
+      const contentType = response.headers?.["content-type"] || "";
 
-Detailed Explanation:
-${selectedRecord.detailed_explanation || "Not available"}
+      if (!contentType.includes("application/pdf")) {
+        setMessage("The backend did not return a PDF. Check the report endpoint.");
+        return;
+      }
 
-Explainable Interpretation:
-${selectedRecord.xai_explanation || "Not available"}
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const fileURL = window.URL.createObjectURL(blob);
 
-Medical Disclaimer:
-${disclaimer}
+      const fileLink = document.createElement("a");
+      fileLink.href = fileURL;
+      fileLink.setAttribute("download", `ecg_report_${recordId}.pdf`);
 
-Generated from ECG Analysis System.
-`;
+      document.body.appendChild(fileLink);
+      fileLink.click();
 
-    const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `ecg-report-record-${selectedRecord.id || "result"}.txt`;
-    document.body.appendChild(link);
-    link.click();
-
-    link.remove();
-    URL.revokeObjectURL(url);
+      fileLink.remove();
+      window.URL.revokeObjectURL(fileURL);
+    } catch (error) {
+      console.error("PDF download error:", error);
+      console.log("Backend response:", error.response?.data);
+      setMessage("PDF report generation failed. Please try again.");
+    }
   };
 
   const handleShareReport = async () => {
@@ -343,7 +344,12 @@ Disclaimer: ${disclaimer}`;
   };
 
   const renderMiniSignal = (values) => {
-    const signal = Array.isArray(values) ? values.slice(0, 80) : [];
+    const signal = Array.isArray(values)
+      ? values
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value))
+          .slice(0, 300)
+      : [];
 
     if (signal.length === 0) {
       return (
@@ -526,11 +532,11 @@ Disclaimer: ${disclaimer}`;
             <div className="section-header">
               <div>
                 <h3>Analysis Result</h3>
-                <p>Record ID: {selectedRecord.id || "N/A"}</p>
+                <p>Record ID: {selectedRecord.id || selectedRecord.record_id || "N/A"}</p>
               </div>
 
               <div className="action-buttons">
-                <button onClick={handleDownloadReport}>Download Report</button>
+                <button onClick={handleDownloadReport}>Download PDF Report</button>
                 <button className="secondary-button" onClick={handleShareReport}>
                   Share / Export
                 </button>
