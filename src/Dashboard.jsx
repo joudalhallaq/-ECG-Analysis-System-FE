@@ -62,11 +62,7 @@ function Dashboard() {
 
     const formData = new FormData();
     formData.append("user_id", userId);
-    formData.append("file", selectedFile);
-
-    setLoadingUpload(true);
-    setMessage("");
-
+    formData.append("ecg_file", selectedFile);
     try {
       await API.post("/ecg/upload/", formData, {
         headers: {
