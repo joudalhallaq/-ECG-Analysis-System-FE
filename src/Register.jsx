@@ -23,6 +23,7 @@ function Register() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+
     setMessage("");
     setSuccessMessage("");
   };
@@ -31,10 +32,10 @@ function Register() {
     e.preventDefault();
 
     if (
-      !formData.username ||
-      !formData.email ||
-      !formData.password ||
-      !formData.confirm_password
+      !formData.username.trim() ||
+      !formData.email.trim() ||
+      !formData.password.trim() ||
+      !formData.confirm_password.trim()
     ) {
       setMessage("All fields are required.");
       return;
@@ -50,7 +51,12 @@ function Register() {
     setSuccessMessage("");
 
     try {
-      const response = await API.post("/users/register/", formData);
+      const response = await API.post("/users/register/", {
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        confirm_password: formData.confirm_password,
+      });
 
       setSuccessMessage(response.data?.message || "Account created successfully.");
 
@@ -66,6 +72,7 @@ function Register() {
       }, 1200);
     } catch (error) {
       console.error("Register error:", error);
+
       setMessage(
         error.response?.data?.error ||
           error.response?.data?.message ||
@@ -92,9 +99,13 @@ function Register() {
 
           <div className="auth-form-side">
             <div className="auth-form-content">
+              <span className="auth-small-label">Start your journey</span>
+
               <h1 className="auth-title">Create Account</h1>
+
               <p className="auth-subtitle">
-                Sign up to start uploading ECG files and tracking your analysis results.
+                Sign up to upload ECG files, view AI analysis, and download
+                reports.
               </p>
 
               <form onSubmit={handleSubmit} className="auth-form">
@@ -107,6 +118,7 @@ function Register() {
                     value={formData.username}
                     onChange={handleChange}
                     className="auth-input"
+                    autoComplete="username"
                   />
                 </div>
 
@@ -119,6 +131,7 @@ function Register() {
                     value={formData.email}
                     onChange={handleChange}
                     className="auth-input"
+                    autoComplete="email"
                   />
                 </div>
 
@@ -131,6 +144,7 @@ function Register() {
                     value={formData.password}
                     onChange={handleChange}
                     className="auth-input"
+                    autoComplete="new-password"
                   />
                 </div>
 
@@ -143,6 +157,7 @@ function Register() {
                     value={formData.confirm_password}
                     onChange={handleChange}
                     className="auth-input"
+                    autoComplete="new-password"
                   />
                 </div>
 
