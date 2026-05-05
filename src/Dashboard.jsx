@@ -278,13 +278,6 @@ function Dashboard() {
         responseType: "blob",
       });
 
-      const contentType = response.headers?.["content-type"] || "";
-
-      if (!contentType.includes("application/pdf")) {
-        setMessage("The backend did not return a PDF. Check the report endpoint.");
-        return;
-      }
-
       const blob = new Blob([response.data], { type: "application/pdf" });
       const fileURL = window.URL.createObjectURL(blob);
 
@@ -381,14 +374,34 @@ Disclaimer: ${disclaimer}`;
   return (
     <div className="dashboard-page">
       <nav className="dashboard-nav">
-        <div>
-          <h2>ECG Analysis System</h2>
-          <p>Welcome, {username || "User"}</p>
+        <div className="dashboard-brand">
+          <div className="brand-badge">ECG</div>
+
+          <div className="brand-text">
+            <span className="brand-label">Smart Heart Monitoring Platform</span>
+            <h2>ECG Analysis System</h2>
+            <p>
+              Welcome back, <strong>{username || "User"}</strong>
+            </p>
+          </div>
         </div>
 
-        <button className="logout-button" onClick={handleLogout}>
-          Logout
-        </button>
+        <div className="dashboard-nav-actions">
+          <div className="user-chip">
+            <div className="user-avatar">
+              {(username || "U").charAt(0).toUpperCase()}
+            </div>
+
+            <div className="user-info">
+              <span>Signed in as</span>
+              <strong>{username || "User"}</strong>
+            </div>
+          </div>
+
+          <button className="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </nav>
 
       <main className="dashboard-container">
@@ -532,7 +545,10 @@ Disclaimer: ${disclaimer}`;
             <div className="section-header">
               <div>
                 <h3>Analysis Result</h3>
-                <p>Record ID: {selectedRecord.id || selectedRecord.record_id || "N/A"}</p>
+                <p>
+                  Record ID:{" "}
+                  {selectedRecord.id || selectedRecord.record_id || "N/A"}
+                </p>
               </div>
 
               <div className="action-buttons">
