@@ -48,33 +48,48 @@ function Dashboard() {
   };
 
   const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
+    const file = e.target.files[0];
+
+    setSelectedFile(file || null);
     setMessage("");
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
 
+    if (!userId) {
+      setMessage("User ID is missing. Please logout and login again.");
+      return;
+    }
+
     if (!selectedFile) {
-      setMessage("Please choose an ECG CSV file first.");
+      setMessage("Please choose a file first.");
       return;
     }
 
     const formData = new FormData();
     formData.append("user_id", userId);
     formData.append("ecg_file", selectedFile);
+
+    setLoadingUpload(true);
+    setMessage("");
+
     try {
-      await API.post("/ecg/upload/", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await API.post("/ecg/upload/", formData);
 
       setSelectedFile(null);
-      setMessage("ECG file uploaded successfully.");
+
+      const fileInput = document.getElementById("ecg-file-input");
+      if (fileInput) {
+        fileInput.value = "";
+      }
+
+      setMessage("File uploaded successfully.");
       await fetchRecords();
     } catch (error) {
       console.error("Upload error:", error);
+      console.log("Backend response:", error.response?.data);
+
       setMessage(
         error.response?.data?.error ||
           error.response?.data?.message ||
@@ -98,10 +113,12 @@ function Dashboard() {
       await fetchRecords();
     } catch (error) {
       console.error("Analyze error:", error);
+      console.log("Backend response:", error.response?.data);
+
       setMessage(
         error.response?.data?.error ||
           error.response?.data?.message ||
-          "Analysis failed. Please try again."
+          "Analysis failed. The uploaded file may not be in a supported ECG format."
       );
     } finally {
       setLoadingAnalyzeId(null);
@@ -117,10 +134,13 @@ function Dashboard() {
 
     try {
       await API.delete(`/ecg/delete/${recordId}/`);
+
       setMessage("Record deleted successfully.");
       await fetchRecords();
     } catch (error) {
       console.error("Delete error:", error);
+      console.log("Backend response:", error.response?.data);
+
       setMessage(
         error.response?.data?.error ||
           error.response?.data?.message ||
@@ -151,10 +171,14 @@ function Dashboard() {
       <main className="dashboard-container">
         <section className="upload-card">
           <h3>Upload ECG File</h3>
-          <p>Upload a CSV file to analyze the ECG condition.</p>
+          <p>Upload an ECG file to analyze the condition.</p>
 
           <form onSubmit={handleUpload} className="upload-form">
-            <input type="file" accept=".csv" onChange={handleFileChange} />
+            <input
+              id="ecg-file-input"
+              type="file"
+              onChange={handleFileChange}
+            />
 
             <button type="submit" disabled={loadingUpload}>
               {loadingUpload ? "Uploading..." : "Upload"}
@@ -189,18 +213,28 @@ function Dashboard() {
                   {records.map((record) => (
                     <tr key={record.id}>
                       <td>{record.id}</td>
-                      <td>{record.file_name || record.file || "ECG file"}</td>
+
+                      <td>
+                        {record.file_name ||
+                          record.file ||
+                          record.ecg_file ||
+                          "ECG file"}
+                      </td>
+
                       <td>
                         {record.uploaded_at
                           ? new Date(record.uploaded_at).toLocaleString()
                           : "N/A"}
                       </td>
+
                       <td>{record.predicted_condition || "Not analyzed"}</td>
+
                       <td>
                         {record.confidence
                           ? `${Math.round(Number(record.confidence) * 100)}%`
                           : "N/A"}
                       </td>
+
                       <td className="action-buttons">
                         <button
                           onClick={() => handleAnalyze(record.id)}
