@@ -350,24 +350,118 @@ Disclaimer: ${disclaimer}`;
     navigate("/login");
   };
 
-  const renderMiniSignal = (values) => {
-    const signal = Array.isArray(values)
-      ? values
-          .flat()
-          .map((value) => Number(value))
-          .filter((value) => Number.isFinite(value))
-          .slice(0, 500)
-      : [];
+ const renderMiniSignal = (values) => {
+  const rawSignal = Array.isArray(values)
+    ? values
+        .map((v) => Number(v))
+        .filter((v) => !Number.isNaN(v) && Number.isFinite(v))
+    : [];
 
-    if (signal.length < 2) {
-      return (
-        <div className="ecg-placeholder">
-          ECG signal visualization is not available for this record yet. Please
-          make sure the uploaded CSV contains numeric ECG signal values.
-        </div>
-      );
-    }
+  if (rawSignal.length < 2) {
+    return (
+      <div className="ecg-placeholder">
+        ECG signal visualization is not available for this record yet.
+      </div>
+    );
+  }
 
+  // نقلل عدد النقاط إذا كانت كثيرة عشان الرسم يكون أنظف وأسرع
+  const maxPoints = 180;
+  const step = Math.max(1, Math.ceil(rawSignal.length / maxPoints));
+  const signal = rawSignal.filter((_, index) => index % step === 0);
+
+  const width = 1000;
+  const height = 320;
+  const padding = 24;
+
+  const min = Math.min(...signal);
+  const max = Math.max(...signal);
+  const range = max - min || 1;
+
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+
+  const points = signal
+    .map((value, index) => {
+      const x =
+        padding + (index / Math.max(signal.length - 1, 1)) * chartWidth;
+      const y =
+        height -
+        padding -
+        ((value - min) / range) * chartHeight;
+
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  const horizontalLines = 5;
+  const verticalLines = 10;
+
+  return (
+    <div className="ecg-chart-wrapper">
+      <svg
+        className="ecg-svg"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+      >
+        {/* background */}
+        <rect
+          x="0"
+          y="0"
+          width={width}
+          height={height}
+          rx="18"
+          className="ecg-bg"
+        />
+
+        {/* horizontal grid */}
+        {Array.from({ length: horizontalLines + 1 }).map((_, i) => {
+          const y = padding + (i / horizontalLines) * chartHeight;
+          return (
+            <line
+              key={`h-${i}`}
+              x1={padding}
+              y1={y}
+              x2={width - padding}
+              y2={y}
+              className="ecg-grid-line"
+            />
+          );
+        })}
+
+        {/* vertical grid */}
+        {Array.from({ length: verticalLines + 1 }).map((_, i) => {
+          const x = padding + (i / verticalLines) * chartWidth;
+          return (
+            <line
+              key={`v-${i}`}
+              x1={x}
+              y1={padding}
+              x2={x}
+              y2={height - padding}
+              className="ecg-grid-line"
+            />
+          );
+        })}
+
+        {/* middle line */}
+        <line
+          x1={padding}
+          y1={height / 2}
+          x2={width - padding}
+          y2={height / 2}
+          className="ecg-mid-line"
+        />
+
+        {/* ECG line */}
+        <polyline
+          points={points}
+          className="ecg-polyline"
+        />
+      </svg>
+    </div>
+  );
+};
     const max = Math.max(...signal);
     const min = Math.min(...signal);
     const range = max - min || 1;
