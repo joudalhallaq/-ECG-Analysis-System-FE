@@ -9,7 +9,9 @@ function Register() {
 
   const [formData, setFormData] = useState({
     username: "",
+    email: "",
     password: "",
+    confirm_password: "",
   });
 
   const [message, setMessage] = useState("");
@@ -28,8 +30,18 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.username || !formData.password) {
-      setMessage("Username and password are required.");
+    if (
+      !formData.username ||
+      !formData.email ||
+      !formData.password ||
+      !formData.confirm_password
+    ) {
+      setMessage("All fields are required.");
+      return;
+    }
+
+    if (formData.password !== formData.confirm_password) {
+      setMessage("Password and confirm password do not match.");
       return;
     }
 
@@ -41,9 +53,12 @@ function Register() {
       const response = await API.post("/users/register/", formData);
 
       setSuccessMessage(response.data?.message || "Account created successfully.");
+
       setFormData({
         username: "",
+        email: "",
         password: "",
+        confirm_password: "",
       });
 
       setTimeout(() => {
@@ -62,7 +77,8 @@ function Register() {
   };
 
   return (
-  
+    <div className="auth-page">
+      <div className="auth-wrapper">
         <div className="auth-card">
           <div className="auth-image-side">
             <div className="auth-image-box">
@@ -95,6 +111,18 @@ function Register() {
                 </div>
 
                 <div className="auth-field">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="auth-input"
+                  />
+                </div>
+
+                <div className="auth-field">
                   <label>Password</label>
                   <input
                     type="password"
@@ -106,8 +134,22 @@ function Register() {
                   />
                 </div>
 
+                <div className="auth-field">
+                  <label>Confirm Password</label>
+                  <input
+                    type="password"
+                    name="confirm_password"
+                    placeholder="Confirm your password"
+                    value={formData.confirm_password}
+                    onChange={handleChange}
+                    className="auth-input"
+                  />
+                </div>
+
                 {message && <div className="auth-error">{message}</div>}
-                {successMessage && <div className="auth-success">{successMessage}</div>}
+                {successMessage && (
+                  <div className="auth-success">{successMessage}</div>
+                )}
 
                 <button type="submit" className="auth-button" disabled={loading}>
                   {loading ? "Creating..." : "Sign Up"}
