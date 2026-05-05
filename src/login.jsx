@@ -1,85 +1,94 @@
-import { useState } from 'react'
-import axios from 'axios'
-import { Link, useNavigate } from 'react-router-dom'
-import heartImage from './assets/heart.png'
-function Login() {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import API from "./api";
+import heartImage from "./assets/hero.png";
+import "./App.css";
 
-  const navigate = useNavigate()
+function Login() {
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+  });
+
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
 
   const handleLogin = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
+    setMessage("");
+    setLoading(true);
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/users/login/', {
-        username,
-        password,
-      })
+      const response = await API.post("/users/login/", formData);
 
-      localStorage.setItem('user_id', response.data.user_id)
-      localStorage.setItem('username', response.data.username)
+      localStorage.setItem("user_id", response.data.user_id);
+      localStorage.setItem("username", response.data.username);
 
-      navigate('/dashboard')
-    } catch {
-      setMessage('Invalid username or password')
+      navigate("/dashboard");
+    } catch (error) {
+      setMessage(
+        error.response?.data?.error || "Login failed. Please check your username and password."
+      );
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-page">
-      <div className="auth-card shadow-lg">
-
-        {/* 🖼️ الصورة */}
-        <div className="text-center mb-3">
-          <img src={heartImage} alt="Heart" className="login-image" />        
-          </div>
-
-        <h2 className="text-center fw-bold">ECG Analysis System</h2>
-        <p className="text-center text-muted mb-4">
-          Heart monitoring for patients
-        </p>
-
-        <h5 className="text-center mb-3">Login</h5>
-
-        <form onSubmit={handleLogin}>
-          <input
-            className="form-control mb-3"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-
-          <input
-            type="password"
-            className="form-control mb-3"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button className="btn btn-heart w-100">
-            Login
-          </button>
-        </form>
-
-        {message && (
-          <div className="alert alert-danger mt-3">
-            {message}
-          </div>
-        )}
-
-        <div className="text-center mt-4">
-          <span className="text-muted">Don’t have an account?</span>{' '}
-          <Link to="/register" className="fw-bold">
-            Register
-          </Link>
+      <div className="auth-card">
+        <div className="auth-image">
+          <img src={heartImage} alt="ECG heart" />
         </div>
 
+        <div className="auth-content">
+          <h1>ECG Analysis System</h1>
+          <p className="subtitle">Login to analyze ECG records and view results.</p>
+
+          <form onSubmit={handleLogin}>
+            <label>Username</label>
+            <input
+              type="text"
+              name="username"
+              placeholder="Enter your username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+            />
+
+            <label>Password</label>
+            <input
+              type="password"
+              name="password"
+              placeholder="Enter your password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+
+            {message && <p className="error-message">{message}</p>}
+
+            <button type="submit" disabled={loading}>
+              {loading ? "Logging in..." : "Login"}
+            </button>
+          </form>
+
+          <p className="switch-text">
+            Don't have an account? <Link to="/register">Register</Link>
+          </p>
+        </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default Login
+export default Login;
