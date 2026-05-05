@@ -916,3 +916,12 @@ a:hover {
     height: 48px;
   }
 }
+.auth-info {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff7e6;
+  color: #7a4b13;
+  font-size: 14px;
+  border: 1px solid #efd3a4;
+}
