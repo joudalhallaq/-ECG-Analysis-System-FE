@@ -9,6 +9,7 @@ function Register() {
 
   const [formData, setFormData] = useState({
     username: "",
+    email: "",
     password: "",
   });
 
@@ -29,6 +30,7 @@ function Register() {
 
     try {
       await API.post("/users/register/", formData);
+
       setMessage("Account created successfully. Redirecting to login...");
 
       setTimeout(() => {
@@ -36,7 +38,9 @@ function Register() {
       }, 1000);
     } catch (error) {
       setMessage(
-        error.response?.data?.error || "Registration failed. Please try again."
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Registration failed. Please try again."
       );
     } finally {
       setLoading(false);
@@ -65,6 +69,16 @@ function Register() {
               required
             />
 
+            <label>Email</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+
             <label>Password</label>
             <input
               type="password"
@@ -76,7 +90,13 @@ function Register() {
             />
 
             {message && (
-              <p className={message.includes("successfully") ? "success-message" : "error-message"}>
+              <p
+                className={
+                  message.includes("successfully")
+                    ? "success-message"
+                    : "error-message"
+                }
+              >
                 {message}
               </p>
             )}
