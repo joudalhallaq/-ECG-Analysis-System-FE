@@ -24,13 +24,12 @@ function Dashboard() {
     "This system is designed to support ECG understanding and education. It does not replace professional medical diagnosis. Please consult a qualified doctor for medical decisions.";
 
   useEffect(() => {
-    if (!userId) {
+    if (!userId || userId === "undefined" || userId === "null") {
       navigate("/login");
       return;
     }
 
     fetchRecords();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const normalizedRecords = useMemo(() => {
@@ -38,8 +37,9 @@ function Dashboard() {
   }, [records]);
 
   const fetchRecords = async () => {
-    setLoadingRecords(true);
+    if (!userId) return;
 
+    setLoadingRecords(true);
     try {
       const response = await API.get(`/ecg/records/?user_id=${userId}`);
 
@@ -68,8 +68,8 @@ function Dashboard() {
   const handleUpload = async (e) => {
     e.preventDefault();
 
-    if (!userId) {
-      setMessage("User ID is missing. Please logout and login again.");
+    if (!userId || userId === "undefined" || userId === "null") {
+      setMessage("User session is invalid. Please logout and login again.");
       return;
     }
 
@@ -86,7 +86,11 @@ function Dashboard() {
     setMessage("");
 
     try {
-      const response = await API.post("/ecg/upload/", formData);
+      const response = await API.post("/ecg/upload/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       setSelectedFile(null);
 
@@ -99,19 +103,25 @@ function Dashboard() {
       console.error("Upload error:", error);
       console.log("Backend response:", error.response?.data);
 
-      setMessage(
-        error.response?.data?.error ||
-          error.response?.data?.message ||
-          "Upload failed. Please check the file and try again."
-      );
+      if (
+        error.response?.data?.error?.toLowerCase().includes("user not found")
+      ) {
+        setMessage("Session issue detected. Please logout and login again.");
+      } else {
+        setMessage(
+          error.response?.data?.error ||
+            error.response?.data?.message ||
+            "Upload failed. Please check the file and try again."
+        );
+      }
     } finally {
       setLoadingUpload(false);
     }
   };
 
   const handleDeviceSubmit = async () => {
-    if (!userId) {
-      setMessage("User ID is missing. Please logout and login again.");
+    if (!userId || userId === "undefined" || userId === "null") {
+      setMessage("User session is invalid. Please logout and login again.");
       return;
     }
 
@@ -177,6 +187,7 @@ function Dashboard() {
       };
 
       setSelectedRecord(analyzedRecord);
+      setShowDetails(true);
       await fetchRecords();
     } catch (error) {
       console.error("Analyze error:", error);
@@ -202,7 +213,6 @@ function Dashboard() {
       setSelectedRecord({
         ...record,
         ...response.data,
-        id: response.data?.id || response.data?.record_id || record.id,
         short_explanation:
           response.data?.short_explanation ||
           record.short_explanation ||
@@ -222,7 +232,6 @@ function Dashboard() {
 
       setSelectedRecord({
         ...record,
-        id: record.id,
         short_explanation:
           record.short_explanation || "No short explanation is available yet.",
         detailed_explanation:
@@ -244,7 +253,6 @@ function Dashboard() {
 
     try {
       await API.delete(`/ecg/delete/${recordId}/`);
-
       setMessage("Record deleted successfully.");
       setSelectedRecord(null);
       await fetchRecords();
@@ -260,74 +268,16 @@ function Dashboard() {
     }
   };
 
-  const handleDownloadReport = async () => {
-    if (!selectedRecord) {
+  const handleDownloadReport = () => {
+    if (!selectedRecord?.id) {
       setMessage("No analysis result available for report generation.");
       return;
     }
 
-    const recordId = selectedRecord.id || selectedRecord.record_id;
-
-    if (!recordId) {
-      setMessage("Record ID is missing. Please click View Result again.");
-      return;
-    }
-
-    try {
-      const response = await API.get(`/ecg/report/${recordId}/`, {
-        responseType: "blob",
-      });
-
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const fileURL = window.URL.createObjectURL(blob);
-
-      const fileLink = document.createElement("a");
-      fileLink.href = fileURL;
-      fileLink.setAttribute("download", `ecg_report_${recordId}.pdf`);
-
-      document.body.appendChild(fileLink);
-      fileLink.click();
-
-      fileLink.remove();
-      window.URL.revokeObjectURL(fileURL);
-    } catch (error) {
-      console.error("PDF download error:", error);
-      console.log("Backend response:", error.response?.data);
-      setMessage("PDF report generation failed. Please try again.");
-    }
-  };
-
-  const handleShareReport = async () => {
-    if (!selectedRecord) {
-      setMessage("No analysis result available to share.");
-      return;
-    }
-
-    const shareText = `ECG Analysis Result:
-Predicted Condition: ${selectedRecord.predicted_condition || "Not available"}
-Confidence: ${
-      selectedRecord.confidence !== undefined && selectedRecord.confidence !== null
-        ? `${Math.round(Number(selectedRecord.confidence) * 100)}%`
-        : "Not available"
-    }
-
-${selectedRecord.short_explanation || ""}
-
-Disclaimer: ${disclaimer}`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "ECG Analysis Report",
-          text: shareText,
-        });
-      } else {
-        await navigator.clipboard.writeText(shareText);
-        setMessage("Report summary copied. You can paste it and send it to your doctor.");
-      }
-    } catch (error) {
-      setMessage("Share failed. You can download the report instead.");
-    }
+    window.open(
+      `https://ecg-analysis-system-be.onrender.com/api/ecg/report/${selectedRecord.id}/`,
+      "_blank"
+    );
   };
 
   const handleLogout = () => {
@@ -337,12 +287,7 @@ Disclaimer: ${disclaimer}`;
   };
 
   const renderMiniSignal = (values) => {
-    const signal = Array.isArray(values)
-      ? values
-          .map((value) => Number(value))
-          .filter((value) => Number.isFinite(value))
-          .slice(0, 300)
-      : [];
+    const signal = Array.isArray(values) ? values.slice(0, 120) : [];
 
     if (signal.length === 0) {
       return (
@@ -373,20 +318,17 @@ Disclaimer: ${disclaimer}`;
 
   return (
     <div className="dashboard-page">
-      <nav className="dashboard-nav clean-nav">
-        <div className="clean-brand">
-          <div className="clean-logo">
-            <span>♥</span>
-          </div>
-
+      <nav className="dashboard-nav modern-nav">
+        <div className="brand-box">
+          <div className="brand-icon">♥</div>
           <div>
             <h2>ECG Analysis System</h2>
             <p>AI-powered ECG analysis and patient-friendly reports</p>
           </div>
         </div>
 
-        <div className="clean-user">
-          <div className="clean-user-text">
+        <div className="nav-actions">
+          <div className="welcome-chip">
             <span>Welcome back</span>
             <strong>{username || "User"}</strong>
           </div>
@@ -433,8 +375,7 @@ Disclaimer: ${disclaimer}`;
           ) : (
             <div className="device-box">
               <p className="helper-text">
-                Paste ECG data sent from the associated device/application. The backend
-                endpoint must support <code>/ecg/device-submit/</code>.
+                Paste ECG data sent from the associated device/application.
               </p>
 
               <textarea
@@ -538,17 +479,11 @@ Disclaimer: ${disclaimer}`;
             <div className="section-header">
               <div>
                 <h3>Analysis Result</h3>
-                <p>
-                  Record ID:{" "}
-                  {selectedRecord.id || selectedRecord.record_id || "N/A"}
-                </p>
+                <p>Record ID: {selectedRecord.id || "N/A"}</p>
               </div>
 
               <div className="action-buttons">
                 <button onClick={handleDownloadReport}>Download PDF Report</button>
-                <button className="secondary-button" onClick={handleShareReport}>
-                  Share / Export
-                </button>
               </div>
             </div>
 
