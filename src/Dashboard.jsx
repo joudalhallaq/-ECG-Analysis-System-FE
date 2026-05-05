@@ -30,6 +30,7 @@ function Dashboard() {
     }
 
     fetchRecords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const normalizedRecords = useMemo(() => {
@@ -40,6 +41,7 @@ function Dashboard() {
     if (!userId) return;
 
     setLoadingRecords(true);
+
     try {
       const response = await API.get(`/ecg/records/?user_id=${userId}`);
 
@@ -101,11 +103,8 @@ function Dashboard() {
       await fetchRecords();
     } catch (error) {
       console.error("Upload error:", error);
-      console.log("Backend response:", error.response?.data);
 
-      if (
-        error.response?.data?.error?.toLowerCase().includes("user not found")
-      ) {
+      if (error.response?.data?.error?.toLowerCase().includes("user not found")) {
         setMessage("Session issue detected. Please logout and login again.");
       } else {
         setMessage(
@@ -145,7 +144,6 @@ function Dashboard() {
       await fetchRecords();
     } catch (error) {
       console.error("Device submit error:", error);
-      console.log("Backend response:", error.response?.data);
 
       setMessage(
         error.response?.data?.error ||
@@ -191,7 +189,6 @@ function Dashboard() {
       await fetchRecords();
     } catch (error) {
       console.error("Analyze error:", error);
-      console.log("Backend response:", error.response?.data);
 
       setMessage(
         error.response?.data?.error ||
@@ -213,6 +210,7 @@ function Dashboard() {
       setSelectedRecord({
         ...record,
         ...response.data,
+        id: response.data?.id || response.data?.record_id || record.id,
         short_explanation:
           response.data?.short_explanation ||
           record.short_explanation ||
@@ -232,6 +230,7 @@ function Dashboard() {
 
       setSelectedRecord({
         ...record,
+        id: record.id,
         short_explanation:
           record.short_explanation || "No short explanation is available yet.",
         detailed_explanation:
@@ -253,12 +252,12 @@ function Dashboard() {
 
     try {
       await API.delete(`/ecg/delete/${recordId}/`);
+
       setMessage("Record deleted successfully.");
       setSelectedRecord(null);
       await fetchRecords();
     } catch (error) {
       console.error("Delete error:", error);
-      console.log("Backend response:", error.response?.data);
 
       setMessage(
         error.response?.data?.error ||
@@ -268,16 +267,66 @@ function Dashboard() {
     }
   };
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     if (!selectedRecord?.id) {
       setMessage("No analysis result available for report generation.");
       return;
     }
 
-    window.open(
-      `https://ecg-analysis-system-be.onrender.com/api/ecg/report/${selectedRecord.id}/`,
-      "_blank"
-    );
+    try {
+      const response = await API.get(`/ecg/report/${selectedRecord.id}/`, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const fileURL = window.URL.createObjectURL(blob);
+
+      const fileLink = document.createElement("a");
+      fileLink.href = fileURL;
+      fileLink.setAttribute("download", `ecg_report_${selectedRecord.id}.pdf`);
+
+      document.body.appendChild(fileLink);
+      fileLink.click();
+
+      fileLink.remove();
+      window.URL.revokeObjectURL(fileURL);
+    } catch (error) {
+      console.error("PDF download error:", error);
+      setMessage("PDF report generation failed. Please try again.");
+    }
+  };
+
+  const handleShareReport = async () => {
+    if (!selectedRecord) {
+      setMessage("No analysis result available to share.");
+      return;
+    }
+
+    const shareText = `ECG Analysis Result:
+Predicted Condition: ${selectedRecord.predicted_condition || "Not available"}
+Confidence: ${
+      selectedRecord.confidence !== undefined && selectedRecord.confidence !== null
+        ? `${Math.round(Number(selectedRecord.confidence) * 100)}%`
+        : "Not available"
+    }
+
+${selectedRecord.short_explanation || ""}
+
+Disclaimer: ${disclaimer}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "ECG Analysis Report",
+          text: shareText,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        setMessage("Report summary copied. You can paste it and send it to your doctor.");
+      }
+    } catch (error) {
+      setMessage("Share failed. You can download the report instead.");
+    }
   };
 
   const handleLogout = () => {
@@ -287,7 +336,12 @@ function Dashboard() {
   };
 
   const renderMiniSignal = (values) => {
-    const signal = Array.isArray(values) ? values.slice(0, 120) : [];
+    const signal = Array.isArray(values)
+      ? values
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value))
+          .slice(0, 300)
+      : [];
 
     if (signal.length === 0) {
       return (
@@ -318,9 +372,10 @@ function Dashboard() {
 
   return (
     <div className="dashboard-page">
-      <nav className="dashboard-nav modern-nav">
+      <nav className="dashboard-nav">
         <div className="brand-box">
           <div className="brand-icon">♥</div>
+
           <div>
             <h2>ECG Analysis System</h2>
             <p>AI-powered ECG analysis and patient-friendly reports</p>
@@ -484,6 +539,9 @@ function Dashboard() {
 
               <div className="action-buttons">
                 <button onClick={handleDownloadReport}>Download PDF Report</button>
+                <button className="secondary-button" onClick={handleShareReport}>
+                  Share / Export
+                </button>
               </div>
             </div>
 
@@ -518,7 +576,9 @@ function Dashboard() {
                 className="secondary-button"
                 onClick={() => setShowDetails(!showDetails)}
               >
-                {showDetails ? "Hide Detailed Explanation" : "Show Detailed Explanation"}
+                {showDetails
+                  ? "Hide Detailed Explanation"
+                  : "Show Detailed Explanation"}
               </button>
 
               {showDetails && (
