@@ -21,7 +21,6 @@ function Register() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
-
     setMessage("");
     setSuccessMessage("");
   };
@@ -52,7 +51,6 @@ function Register() {
       }, 1200);
     } catch (error) {
       console.error("Register error:", error);
-
       setMessage(
         error.response?.data?.error ||
           error.response?.data?.message ||
@@ -65,59 +63,72 @@ function Register() {
 
   return (
     <div className="auth-page">
-      <div className="auth-shell">
-        <div className="auth-visual">
-          <div className="auth-image-card">
-            <img src={heartImage} alt="ECG illustration" className="auth-image" />
-          </div>
+      <div className="auth-wrapper">
+        <div className="auth-palette">
+          <span className="palette-dot dot-1"></span>
+          <span className="palette-dot dot-2"></span>
+          <span className="palette-dot dot-3"></span>
+          <span className="palette-dot dot-4"></span>
         </div>
 
-        <div className="auth-form-panel">
-          <div className="auth-form-content">
-            <h1 className="auth-title">Create Account</h1>
-            <p className="auth-subtitle">
-              Register to start analyzing ECG files.
-            </p>
+        <div className="auth-card">
+          <div className="auth-image-side">
+            <div className="auth-image-box">
+              <img
+                src={heartImage}
+                alt="Heart illustration"
+                className="auth-image"
+              />
+            </div>
+          </div>
 
-            <form onSubmit={handleSubmit} className="auth-form">
-              <div className="auth-field">
-                <label>Username</label>
-                <input
-                  type="text"
-                  name="username"
-                  placeholder="Enter your username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="auth-input"
-                />
-              </div>
+          <div className="auth-form-side">
+            <div className="auth-form-content">
+              <h1 className="auth-title">Create Account</h1>
+              <p className="auth-subtitle">
+                Sign up to start uploading ECG files and tracking your analysis results.
+              </p>
 
-              <div className="auth-field">
-                <label>Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="auth-input"
-                />
-              </div>
+              <form onSubmit={handleSubmit} className="auth-form">
+                <div className="auth-field">
+                  <label>Username</label>
+                  <input
+                    type="text"
+                    name="username"
+                    placeholder="Choose a username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    className="auth-input"
+                  />
+                </div>
 
-              {message && <div className="auth-error">{message}</div>}
-              {successMessage && <div className="auth-success">{successMessage}</div>}
+                <div className="auth-field">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Create a password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="auth-input"
+                  />
+                </div>
 
-              <button type="submit" className="auth-button" disabled={loading}>
-                {loading ? "Creating..." : "Register"}
-              </button>
-            </form>
+                {message && <div className="auth-error">{message}</div>}
+                {successMessage && <div className="auth-success">{successMessage}</div>}
 
-            <p className="auth-footer-text">
-              Already have an account?{" "}
-              <Link to="/login" className="auth-link">
-                Login
-              </Link>
-            </p>
+                <button type="submit" className="auth-button" disabled={loading}>
+                  {loading ? "Creating..." : "Sign Up"}
+                </button>
+              </form>
+
+              <p className="auth-footer-text">
+                Already have an account?{" "}
+                <Link to="/login" className="auth-link">
+                  Login
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>
