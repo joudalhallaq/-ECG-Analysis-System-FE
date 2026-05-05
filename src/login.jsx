@@ -33,7 +33,7 @@ function Login() {
     }
 
     setLoading(true);
-    setMessage("Please wait. The server may take up to 60 seconds to wake up.");
+    setMessage("");
 
     try {
       const response = await API.post("/users/login/", {
@@ -43,27 +43,24 @@ function Login() {
 
       if (!response.data?.user_id) {
         setMessage("Login succeeded but user data was not returned correctly.");
-        setLoading(false);
         return;
       }
 
       localStorage.setItem("user_id", response.data.user_id);
-      localStorage.setItem("username", response.data.username || formData.username.trim());
+      localStorage.setItem(
+        "username",
+        response.data.username || formData.username.trim()
+      );
 
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      console.log("Backend response:", error.response?.data);
 
-      if (error.code === "ECONNABORTED") {
-        setMessage("The server took too long to respond. Please try again.");
-      } else {
-        setMessage(
-          error.response?.data?.error ||
-            error.response?.data?.message ||
-            "Invalid username or password."
-        );
-      }
+      setMessage(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Invalid credentials"
+      );
     } finally {
       setLoading(false);
     }
@@ -85,10 +82,13 @@ function Login() {
 
           <div className="auth-form-side">
             <div className="auth-form-content">
+              <span className="auth-small-label">Welcome back</span>
+
               <h1 className="auth-title">Login</h1>
 
               <p className="auth-subtitle">
-                Access your account to analyze ECG records and manage your results.
+                Access your account to analyze ECG records and manage your
+                results.
               </p>
 
               <form onSubmit={handleSubmit} className="auth-form">
@@ -118,17 +118,7 @@ function Login() {
                   />
                 </div>
 
-                {message && (
-                  <div
-                    className={
-                      message.includes("Please wait")
-                        ? "auth-info"
-                        : "auth-error"
-                    }
-                  >
-                    {message}
-                  </div>
-                )}
+                {message && <div className="auth-error">{message}</div>}
 
                 <button type="submit" className="auth-button" disabled={loading}>
                   {loading ? "Logging in..." : "Login"}
