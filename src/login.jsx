@@ -20,34 +20,50 @@ function Login() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+
     setMessage("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.username || !formData.password) {
+    if (!formData.username.trim() || !formData.password.trim()) {
       setMessage("Please enter username and password.");
       return;
     }
 
     setLoading(true);
-    setMessage("");
+    setMessage("Please wait. The server may take up to 60 seconds to wake up.");
 
     try {
-      const response = await API.post("/users/login/", formData);
+      const response = await API.post("/users/login/", {
+        username: formData.username.trim(),
+        password: formData.password,
+      });
+
+      if (!response.data?.user_id) {
+        setMessage("Login succeeded but user data was not returned correctly.");
+        setLoading(false);
+        return;
+      }
 
       localStorage.setItem("user_id", response.data.user_id);
-      localStorage.setItem("username", response.data.username);
+      localStorage.setItem("username", response.data.username || formData.username.trim());
 
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      setMessage(
-        error.response?.data?.error ||
-          error.response?.data?.message ||
-          "Invalid credentials"
-      );
+      console.log("Backend response:", error.response?.data);
+
+      if (error.code === "ECONNABORTED") {
+        setMessage("The server took too long to respond. Please try again.");
+      } else {
+        setMessage(
+          error.response?.data?.error ||
+            error.response?.data?.message ||
+            "Invalid username or password."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -70,6 +86,7 @@ function Login() {
           <div className="auth-form-side">
             <div className="auth-form-content">
               <h1 className="auth-title">Login</h1>
+
               <p className="auth-subtitle">
                 Access your account to analyze ECG records and manage your results.
               </p>
@@ -84,6 +101,7 @@ function Login() {
                     value={formData.username}
                     onChange={handleChange}
                     className="auth-input"
+                    autoComplete="username"
                   />
                 </div>
 
@@ -96,10 +114,21 @@ function Login() {
                     value={formData.password}
                     onChange={handleChange}
                     className="auth-input"
+                    autoComplete="current-password"
                   />
                 </div>
 
-                {message && <div className="auth-error">{message}</div>}
+                {message && (
+                  <div
+                    className={
+                      message.includes("Please wait")
+                        ? "auth-info"
+                        : "auth-error"
+                    }
+                  >
+                    {message}
+                  </div>
+                )}
 
                 <button type="submit" className="auth-button" disabled={loading}>
                   {loading ? "Logging in..." : "Login"}
