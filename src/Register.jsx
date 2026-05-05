@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import API from "./api";
 import heartImage from "./assets/new-auth-image.png";
 import "./App.css";
@@ -9,34 +9,50 @@ function Register() {
 
   const [formData, setFormData] = useState({
     username: "",
-    email: "",
     password: "",
   });
 
   const [message, setMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
+
+    setMessage("");
+    setSuccessMessage("");
   };
 
-  const handleRegister = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage("");
+
+    if (!formData.username || !formData.password) {
+      setMessage("Username and password are required.");
+      return;
+    }
+
     setLoading(true);
+    setMessage("");
+    setSuccessMessage("");
 
     try {
-      await API.post("/users/register/", formData);
+      const response = await API.post("/users/register/", formData);
 
-      setMessage("Account created successfully. Redirecting to login...");
+      setSuccessMessage(response.data?.message || "Account created successfully.");
+      setFormData({
+        username: "",
+        password: "",
+      });
 
       setTimeout(() => {
         navigate("/login");
-      }, 1000);
+      }, 1200);
     } catch (error) {
+      console.error("Register error:", error);
+
       setMessage(
         error.response?.data?.error ||
           error.response?.data?.message ||
@@ -49,66 +65,60 @@ function Register() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-image">
-          <img src={heartImage} alt="ECG heart" />
+      <div className="auth-shell">
+        <div className="auth-visual">
+          <div className="auth-image-card">
+            <img src={heartImage} alt="ECG illustration" className="auth-image" />
+          </div>
         </div>
 
-        <div className="auth-content">
-          <h1>Create Account</h1>
-          <p className="subtitle">Register to start analyzing ECG files.</p>
+        <div className="auth-form-panel">
+          <div className="auth-form-content">
+            <h1 className="auth-title">Create Account</h1>
+            <p className="auth-subtitle">
+              Register to start analyzing ECG files.
+            </p>
 
-          <form onSubmit={handleRegister}>
-            <label>Username</label>
-            <input
-              type="text"
-              name="username"
-              placeholder="Choose a username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-            />
+            <form onSubmit={handleSubmit} className="auth-form">
+              <div className="auth-field">
+                <label>Username</label>
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="Enter your username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="auth-input"
+                />
+              </div>
 
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
+              <div className="auth-field">
+                <label>Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="auth-input"
+                />
+              </div>
 
-            <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="Choose a password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
+              {message && <div className="auth-error">{message}</div>}
+              {successMessage && <div className="auth-success">{successMessage}</div>}
 
-            {message && (
-              <p
-                className={
-                  message.includes("successfully")
-                    ? "success-message"
-                    : "error-message"
-                }
-              >
-                {message}
-              </p>
-            )}
+              <button type="submit" className="auth-button" disabled={loading}>
+                {loading ? "Creating..." : "Register"}
+              </button>
+            </form>
 
-            <button type="submit" disabled={loading}>
-              {loading ? "Creating account..." : "Register"}
-            </button>
-          </form>
-
-          <p className="switch-text">
-            Already have an account? <Link to="/login">Login</Link>
-          </p>
+            <p className="auth-footer-text">
+              Already have an account?{" "}
+              <Link to="/login" className="auth-link">
+                Login
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
