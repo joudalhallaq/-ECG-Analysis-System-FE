@@ -1,81 +1,98 @@
-import { useState } from 'react'
-import axios from 'axios'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import API from "./api";
+import heartImage from "./assets/hero.png";
+import "./App.css";
 
 function Register() {
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
+  const navigate = useNavigate();
 
-  const navigate = useNavigate()
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+  });
+
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
 
   const handleRegister = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
+    setMessage("");
+    setLoading(true);
 
     try {
-      await axios.post('http://127.0.0.1:8000/api/users/register/', {
-        username,
-        email,
-        password,
-      })
-
-      setMessage('Registration successful ✅')
+      await API.post("/users/register/", formData);
+      setMessage("Account created successfully. Redirecting to login...");
 
       setTimeout(() => {
-        navigate('/')
-      }, 1000)
+        navigate("/login");
+      }, 1000);
     } catch (error) {
-      if (error.response && error.response.data.error) {
-        setMessage(error.response.data.error)
-      } else {
-        setMessage('Registration failed ❌')
-      }
+      setMessage(
+        error.response?.data?.error || "Registration failed. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="container mt-5">
-      <h1 className="text-center mb-4">ECG Analysis System</h1>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-image">
+          <img src={heartImage} alt="ECG heart" />
+        </div>
 
-      <div className="card p-4 shadow mx-auto" style={{ maxWidth: '500px' }}>
-        <h3 className="mb-3">Register</h3>
+        <div className="auth-content">
+          <h1>Create Account</h1>
+          <p className="subtitle">Register to start analyzing ECG files.</p>
 
-        <form onSubmit={handleRegister}>
-          <input
-            className="form-control mb-3"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+          <form onSubmit={handleRegister}>
+            <label>Username</label>
+            <input
+              type="text"
+              name="username"
+              placeholder="Choose a username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+            />
 
-          <input
-            type="email"
-            className="form-control mb-3"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+            <label>Password</label>
+            <input
+              type="password"
+              name="password"
+              placeholder="Choose a password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
 
-          <input
-            type="password"
-            className="form-control mb-3"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+            {message && (
+              <p className={message.includes("successfully") ? "success-message" : "error-message"}>
+                {message}
+              </p>
+            )}
 
-          <button className="btn btn-primary w-100">Register</button>
-        </form>
+            <button type="submit" disabled={loading}>
+              {loading ? "Creating account..." : "Register"}
+            </button>
+          </form>
 
-        {message && <div className="alert alert-info mt-3 mb-0">{message}</div>}
-
-        <div className="mt-3 text-center">
-          Already have an account? <Link to="/">Login</Link>
+          <p className="switch-text">
+            Already have an account? <Link to="/login">Login</Link>
+          </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default Register
+export default Register;
