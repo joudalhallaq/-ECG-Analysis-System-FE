@@ -55,58 +55,71 @@ function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-shell">
-        <div className="auth-visual">
-          <div className="auth-image-card">
-            <img src={heartImage} alt="ECG illustration" className="auth-image" />
-          </div>
+      <div className="auth-wrapper">
+        <div className="auth-palette">
+          <span className="palette-dot dot-1"></span>
+          <span className="palette-dot dot-2"></span>
+          <span className="palette-dot dot-3"></span>
+          <span className="palette-dot dot-4"></span>
         </div>
 
-        <div className="auth-form-panel">
-          <div className="auth-form-content">
-            <h1 className="auth-title">ECG Analysis System</h1>
-            <p className="auth-subtitle">
-              Login to analyze ECG records and view results.
-            </p>
+        <div className="auth-card">
+          <div className="auth-image-side">
+            <div className="auth-image-box">
+              <img
+                src={heartImage}
+                alt="Heart illustration"
+                className="auth-image"
+              />
+            </div>
+          </div>
 
-            <form onSubmit={handleSubmit} className="auth-form">
-              <div className="auth-field">
-                <label>Username</label>
-                <input
-                  type="text"
-                  name="username"
-                  placeholder="Enter your username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="auth-input"
-                />
-              </div>
+          <div className="auth-form-side">
+            <div className="auth-form-content">
+              <h1 className="auth-title">Login</h1>
+              <p className="auth-subtitle">
+                Access your account to analyze ECG records and manage your results.
+              </p>
 
-              <div className="auth-field">
-                <label>Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="auth-input"
-                />
-              </div>
+              <form onSubmit={handleSubmit} className="auth-form">
+                <div className="auth-field">
+                  <label>Username</label>
+                  <input
+                    type="text"
+                    name="username"
+                    placeholder="Enter your username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    className="auth-input"
+                  />
+                </div>
 
-              {message && <div className="auth-error">{message}</div>}
+                <div className="auth-field">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="auth-input"
+                  />
+                </div>
 
-              <button type="submit" className="auth-button" disabled={loading}>
-                {loading ? "Logging in..." : "Login"}
-              </button>
-            </form>
+                {message && <div className="auth-error">{message}</div>}
 
-            <p className="auth-footer-text">
-              Don't have an account?{" "}
-              <Link to="/register" className="auth-link">
-                Register
-              </Link>
-            </p>
+                <button type="submit" className="auth-button" disabled={loading}>
+                  {loading ? "Logging in..." : "Login"}
+                </button>
+              </form>
+
+              <p className="auth-footer-text">
+                Don't have an account?{" "}
+                <Link to="/register" className="auth-link">
+                  Sign Up
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>
