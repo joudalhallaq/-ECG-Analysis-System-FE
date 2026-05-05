@@ -373,29 +373,22 @@ Disclaimer: ${disclaimer}`;
 
   return (
     <div className="dashboard-page">
-      <nav className="dashboard-nav">
-        <div className="dashboard-brand">
-          <div className="brand-badge">ECG</div>
+      <nav className="dashboard-nav clean-nav">
+        <div className="clean-brand">
+          <div className="clean-logo">
+            <span>♥</span>
+          </div>
 
-          <div className="brand-text">
-            <span className="brand-label">Smart Heart Monitoring Platform</span>
+          <div>
             <h2>ECG Analysis System</h2>
-            <p>
-              Welcome back, <strong>{username || "User"}</strong>
-            </p>
+            <p>AI-powered ECG analysis and patient-friendly reports</p>
           </div>
         </div>
 
-        <div className="dashboard-nav-actions">
-          <div className="user-chip">
-            <div className="user-avatar">
-              {(username || "U").charAt(0).toUpperCase()}
-            </div>
-
-            <div className="user-info">
-              <span>Signed in as</span>
-              <strong>{username || "User"}</strong>
-            </div>
+        <div className="clean-user">
+          <div className="clean-user-text">
+            <span>Welcome back</span>
+            <strong>{username || "User"}</strong>
           </div>
 
           <button className="logout-button" onClick={handleLogout}>
