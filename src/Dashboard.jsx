@@ -13,6 +13,7 @@ function Dashboard() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [message, setMessage] = useState("");
   const [loadingUpload, setLoadingUpload] = useState(false);
+  const [loadingRecords, setLoadingRecords] = useState(false);
   const [loadingAnalyzeId, setLoadingAnalyzeId] = useState(null);
 
   useEffect(() => {
@@ -25,11 +26,24 @@ function Dashboard() {
   }, []);
 
   const fetchRecords = async () => {
+    setLoadingRecords(true);
+
     try {
       const response = await API.get(`/ecg/records/?user_id=${userId}`);
-      setRecords(response.data);
+
+      if (Array.isArray(response.data)) {
+        setRecords(response.data);
+      } else if (Array.isArray(response.data.records)) {
+        setRecords(response.data.records);
+      } else {
+        setRecords([]);
+      }
     } catch (error) {
+      console.error("Fetch records error:", error);
       setMessage("Could not load ECG records.");
+      setRecords([]);
+    } finally {
+      setLoadingRecords(false);
     }
   };
 
@@ -42,7 +56,7 @@ function Dashboard() {
     e.preventDefault();
 
     if (!selectedFile) {
-      setMessage("Please choose an ECG file first.");
+      setMessage("Please choose an ECG CSV file first.");
       return;
     }
 
@@ -62,10 +76,13 @@ function Dashboard() {
 
       setSelectedFile(null);
       setMessage("ECG file uploaded successfully.");
-      fetchRecords();
+      await fetchRecords();
     } catch (error) {
+      console.error("Upload error:", error);
       setMessage(
-        error.response?.data?.error || "Upload failed. Please try again."
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Upload failed. Please try again."
       );
     } finally {
       setLoadingUpload(false);
@@ -82,10 +99,13 @@ function Dashboard() {
       });
 
       setMessage("ECG analyzed successfully.");
-      fetchRecords();
+      await fetchRecords();
     } catch (error) {
+      console.error("Analyze error:", error);
       setMessage(
-        error.response?.data?.error || "Analysis failed. Please try again."
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Analysis failed. Please try again."
       );
     } finally {
       setLoadingAnalyzeId(null);
@@ -93,17 +113,22 @@ function Dashboard() {
   };
 
   const handleDelete = async (recordId) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this record?");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this record?"
+    );
 
     if (!confirmDelete) return;
 
     try {
       await API.delete(`/ecg/delete/${recordId}/`);
       setMessage("Record deleted successfully.");
-      fetchRecords();
+      await fetchRecords();
     } catch (error) {
+      console.error("Delete error:", error);
       setMessage(
-        error.response?.data?.error || "Delete failed. Please try again."
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Delete failed. Please try again."
       );
     }
   };
@@ -119,7 +144,7 @@ function Dashboard() {
       <nav className="dashboard-nav">
         <div>
           <h2>ECG Analysis System</h2>
-          <p>Welcome, {username}</p>
+          <p>Welcome, {username || "User"}</p>
         </div>
 
         <button className="logout-button" onClick={handleLogout}>
@@ -133,11 +158,7 @@ function Dashboard() {
           <p>Upload a CSV file to analyze the ECG condition.</p>
 
           <form onSubmit={handleUpload} className="upload-form">
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-            />
+            <input type="file" accept=".csv" onChange={handleFileChange} />
 
             <button type="submit" disabled={loadingUpload}>
               {loadingUpload ? "Uploading..." : "Upload"}
@@ -150,7 +171,9 @@ function Dashboard() {
         <section className="records-card">
           <h3>Your ECG Records</h3>
 
-          {records.length === 0 ? (
+          {loadingRecords ? (
+            <p className="empty-text">Loading records...</p>
+          ) : records.length === 0 ? (
             <p className="empty-text">No ECG records uploaded yet.</p>
           ) : (
             <div className="records-table-wrapper">
@@ -170,7 +193,7 @@ function Dashboard() {
                   {records.map((record) => (
                     <tr key={record.id}>
                       <td>{record.id}</td>
-                      <td>{record.file_name}</td>
+                      <td>{record.file_name || record.file || "ECG file"}</td>
                       <td>
                         {record.uploaded_at
                           ? new Date(record.uploaded_at).toLocaleString()
@@ -179,7 +202,7 @@ function Dashboard() {
                       <td>{record.predicted_condition || "Not analyzed"}</td>
                       <td>
                         {record.confidence
-                          ? `${Math.round(record.confidence * 100)}%`
+                          ? `${Math.round(Number(record.confidence) * 100)}%`
                           : "N/A"}
                       </td>
                       <td className="action-buttons">
@@ -187,7 +210,9 @@ function Dashboard() {
                           onClick={() => handleAnalyze(record.id)}
                           disabled={loadingAnalyzeId === record.id}
                         >
-                          {loadingAnalyzeId === record.id ? "Analyzing..." : "Analyze"}
+                          {loadingAnalyzeId === record.id
+                            ? "Analyzing..."
+                            : "Analyze"}
                         </button>
 
                         <button
