@@ -54,14 +54,6 @@ function Login() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-wrapper">
-        <div className="auth-palette">
-          <span className="palette-dot dot-1"></span>
-          <span className="palette-dot dot-2"></span>
-          <span className="palette-dot dot-3"></span>
-          <span className="palette-dot dot-4"></span>
-        </div>
 
         <div className="auth-card">
           <div className="auth-image-side">
