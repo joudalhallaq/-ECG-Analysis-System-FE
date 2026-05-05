@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "./api";
-import heartImage from "./assets/hero.png";
+import heartImage from "./assets/login-image.png";
 import "./App.css";
 
 function Register() {
