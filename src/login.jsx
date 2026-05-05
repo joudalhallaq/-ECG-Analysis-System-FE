@@ -54,7 +54,8 @@ function Login() {
   };
 
   return (
-
+    <div className="auth-page">
+      <div className="auth-wrapper">
         <div className="auth-card">
           <div className="auth-image-side">
             <div className="auth-image-box">
