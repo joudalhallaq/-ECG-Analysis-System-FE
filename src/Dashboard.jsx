@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "./api";
 import "./App.css";
@@ -15,6 +15,13 @@ function Dashboard() {
   const [loadingUpload, setLoadingUpload] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [loadingAnalyzeId, setLoadingAnalyzeId] = useState(null);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [deviceMode, setDeviceMode] = useState(false);
+  const [deviceText, setDeviceText] = useState("");
+
+  const disclaimer =
+    "This system is designed to support ECG understanding and education. It does not replace professional medical diagnosis. Please consult a qualified doctor for medical decisions.";
 
   useEffect(() => {
     if (!userId) {
@@ -24,6 +31,10 @@ function Dashboard() {
 
     fetchRecords();
   }, []);
+
+  const normalizedRecords = useMemo(() => {
+    return Array.isArray(records) ? records : [];
+  }, [records]);
 
   const fetchRecords = async () => {
     setLoadingRecords(true);
@@ -40,7 +51,7 @@ function Dashboard() {
       }
     } catch (error) {
       console.error("Fetch records error:", error);
-      setMessage("Could not load ECG records.");
+      setMessage("Could not load ECG records. Please try again.");
       setRecords([]);
     } finally {
       setLoadingRecords(false);
@@ -49,7 +60,6 @@ function Dashboard() {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-
     setSelectedFile(file || null);
     setMessage("");
   };
@@ -63,7 +73,7 @@ function Dashboard() {
     }
 
     if (!selectedFile) {
-      setMessage("Please choose a file first.");
+      setMessage("Please choose an ECG file first.");
       return;
     }
 
@@ -75,16 +85,14 @@ function Dashboard() {
     setMessage("");
 
     try {
-      await API.post("/ecg/upload/", formData);
+      const response = await API.post("/ecg/upload/", formData);
 
       setSelectedFile(null);
 
       const fileInput = document.getElementById("ecg-file-input");
-      if (fileInput) {
-        fileInput.value = "";
-      }
+      if (fileInput) fileInput.value = "";
 
-      setMessage("File uploaded successfully.");
+      setMessage(response.data?.message || "ECG file uploaded successfully.");
       await fetchRecords();
     } catch (error) {
       console.error("Upload error:", error);
@@ -93,7 +101,45 @@ function Dashboard() {
       setMessage(
         error.response?.data?.error ||
           error.response?.data?.message ||
-          "Upload failed. Please try again."
+          "Upload failed. Please check the file and try again."
+      );
+    } finally {
+      setLoadingUpload(false);
+    }
+  };
+
+  const handleDeviceSubmit = async () => {
+    if (!userId) {
+      setMessage("User ID is missing. Please logout and login again.");
+      return;
+    }
+
+    if (!deviceText.trim()) {
+      setMessage("Please paste ECG data from the external device first.");
+      return;
+    }
+
+    setLoadingUpload(true);
+    setMessage("");
+
+    try {
+      const response = await API.post("/ecg/device-submit/", {
+        user_id: userId,
+        ecg_data: deviceText,
+        source_type: "external_device",
+      });
+
+      setDeviceText("");
+      setMessage(response.data?.message || "ECG data received successfully.");
+      await fetchRecords();
+    } catch (error) {
+      console.error("Device submit error:", error);
+      console.log("Backend response:", error.response?.data);
+
+      setMessage(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "External ECG submission is not available yet on the backend."
       );
     } finally {
       setLoadingUpload(false);
@@ -103,13 +149,33 @@ function Dashboard() {
   const handleAnalyze = async (recordId) => {
     setLoadingAnalyzeId(recordId);
     setMessage("");
+    setSelectedRecord(null);
 
     try {
-      await API.post("/ecg/analyze/", {
+      const response = await API.post("/ecg/analyze/", {
         record_id: recordId,
       });
 
-      setMessage("ECG analyzed successfully.");
+      setMessage(response.data?.message || "ECG analyzed successfully.");
+
+      const analyzedRecord = {
+        id: response.data?.record_id || recordId,
+        predicted_condition: response.data?.predicted_condition || "Unknown",
+        confidence: response.data?.confidence,
+        short_explanation:
+          response.data?.short_explanation ||
+          "The ECG was analyzed by the AI model and a predicted condition was generated.",
+        detailed_explanation:
+          response.data?.detailed_explanation ||
+          response.data?.short_explanation ||
+          "A detailed explanation is not available for this result yet.",
+        xai_explanation:
+          response.data?.xai_explanation ||
+          "Advanced explainable AI highlighting is not available for this analysis yet.",
+        signal_values: response.data?.signal_values || [],
+      };
+
+      setSelectedRecord(analyzedRecord);
       await fetchRecords();
     } catch (error) {
       console.error("Analyze error:", error);
@@ -125,9 +191,48 @@ function Dashboard() {
     }
   };
 
+  const handleViewResult = async (record) => {
+    setMessage("");
+    setShowDetails(false);
+
+    try {
+      const response = await API.get(`/ecg/result/${record.id}/`);
+
+      setSelectedRecord({
+        ...record,
+        ...response.data,
+        short_explanation:
+          response.data?.short_explanation ||
+          record.short_explanation ||
+          "No short explanation is available yet.",
+        detailed_explanation:
+          response.data?.detailed_explanation ||
+          record.detailed_explanation ||
+          "No detailed explanation is available yet.",
+        xai_explanation:
+          response.data?.xai_explanation ||
+          record.xai_explanation ||
+          "Advanced explainable AI highlighting is not available for this analysis yet.",
+        signal_values: response.data?.signal_values || record.signal_values || [],
+      });
+    } catch (error) {
+      setSelectedRecord({
+        ...record,
+        short_explanation:
+          record.short_explanation || "No short explanation is available yet.",
+        detailed_explanation:
+          record.detailed_explanation || "No detailed explanation is available yet.",
+        xai_explanation:
+          record.xai_explanation ||
+          "Advanced explainable AI highlighting is not available for this analysis yet.",
+        signal_values: record.signal_values || [],
+      });
+    }
+  };
+
   const handleDelete = async (recordId) => {
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this record?"
+      "Are you sure you want to delete this ECG record?"
     );
 
     if (!confirmDelete) return;
@@ -136,6 +241,7 @@ function Dashboard() {
       await API.delete(`/ecg/delete/${recordId}/`);
 
       setMessage("Record deleted successfully.");
+      setSelectedRecord(null);
       await fetchRecords();
     } catch (error) {
       console.error("Delete error:", error);
@@ -149,10 +255,121 @@ function Dashboard() {
     }
   };
 
+  const handleDownloadReport = () => {
+    if (!selectedRecord) {
+      setMessage("No analysis result available for report generation.");
+      return;
+    }
+
+    const condition = selectedRecord.predicted_condition || "Not available";
+    const confidence =
+      selectedRecord.confidence !== undefined && selectedRecord.confidence !== null
+        ? `${Math.round(Number(selectedRecord.confidence) * 100)}%`
+        : "Not available";
+
+    const reportText = `
+ECG ANALYSIS REPORT
+
+Patient/User: ${username || "User"}
+Record ID: ${selectedRecord.id || "N/A"}
+Predicted Condition: ${condition}
+Confidence: ${confidence}
+
+Short Explanation:
+${selectedRecord.short_explanation || "Not available"}
+
+Detailed Explanation:
+${selectedRecord.detailed_explanation || "Not available"}
+
+Explainable Interpretation:
+${selectedRecord.xai_explanation || "Not available"}
+
+Medical Disclaimer:
+${disclaimer}
+
+Generated from ECG Analysis System.
+`;
+
+    const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ecg-report-record-${selectedRecord.id || "result"}.txt`;
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShareReport = async () => {
+    if (!selectedRecord) {
+      setMessage("No analysis result available to share.");
+      return;
+    }
+
+    const shareText = `ECG Analysis Result:
+Predicted Condition: ${selectedRecord.predicted_condition || "Not available"}
+Confidence: ${
+      selectedRecord.confidence !== undefined && selectedRecord.confidence !== null
+        ? `${Math.round(Number(selectedRecord.confidence) * 100)}%`
+        : "Not available"
+    }
+
+${selectedRecord.short_explanation || ""}
+
+Disclaimer: ${disclaimer}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "ECG Analysis Report",
+          text: shareText,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        setMessage("Report summary copied. You can paste it and send it to your doctor.");
+      }
+    } catch (error) {
+      setMessage("Share failed. You can download the report instead.");
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("user_id");
     localStorage.removeItem("username");
     navigate("/login");
+  };
+
+  const renderMiniSignal = (values) => {
+    const signal = Array.isArray(values) ? values.slice(0, 80) : [];
+
+    if (signal.length === 0) {
+      return (
+        <div className="ecg-placeholder">
+          ECG signal visualization is not available for this record yet.
+        </div>
+      );
+    }
+
+    const max = Math.max(...signal);
+    const min = Math.min(...signal);
+    const range = max - min || 1;
+
+    const points = signal
+      .map((value, index) => {
+        const x = (index / Math.max(signal.length - 1, 1)) * 100;
+        const y = 50 - ((value - min) / range - 0.5) * 70;
+        return `${x},${y}`;
+      })
+      .join(" ");
+
+    return (
+      <svg className="ecg-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <polyline points={points} fill="none" strokeWidth="2" />
+      </svg>
+    );
   };
 
   return (
@@ -169,21 +386,57 @@ function Dashboard() {
       </nav>
 
       <main className="dashboard-container">
+        <section className="disclaimer-card">
+          <strong>Medical Disclaimer:</strong> {disclaimer}
+        </section>
+
         <section className="upload-card">
-          <h3>Upload ECG File</h3>
-          <p>Upload an ECG file to analyze the condition.</p>
+          <div className="section-header">
+            <div>
+              <h3>ECG Submission</h3>
+              <p>Upload an ECG file or submit ECG data from an external device.</p>
+            </div>
 
-          <form onSubmit={handleUpload} className="upload-form">
-            <input
-              id="ecg-file-input"
-              type="file"
-              onChange={handleFileChange}
-            />
-
-            <button type="submit" disabled={loadingUpload}>
-              {loadingUpload ? "Uploading..." : "Upload"}
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setDeviceMode(!deviceMode)}
+            >
+              {deviceMode ? "Use File Upload" : "Use External Device"}
             </button>
-          </form>
+          </div>
+
+          {!deviceMode ? (
+            <form onSubmit={handleUpload} className="upload-form">
+              <input
+                id="ecg-file-input"
+                type="file"
+                onChange={handleFileChange}
+              />
+
+              <button type="submit" disabled={loadingUpload}>
+                {loadingUpload ? "Uploading..." : "Upload"}
+              </button>
+            </form>
+          ) : (
+            <div className="device-box">
+              <p className="helper-text">
+                Paste ECG data sent from the associated device/application. The backend
+                endpoint must support <code>/ecg/device-submit/</code>.
+              </p>
+
+              <textarea
+                value={deviceText}
+                onChange={(e) => setDeviceText(e.target.value)}
+                placeholder="Paste ECG samples or transferred ECG data here..."
+                rows="6"
+              />
+
+              <button onClick={handleDeviceSubmit} disabled={loadingUpload}>
+                {loadingUpload ? "Submitting..." : "Submit Device ECG"}
+              </button>
+            </div>
+          )}
 
           {message && <p className="dashboard-message">{message}</p>}
         </section>
@@ -193,7 +446,7 @@ function Dashboard() {
 
           {loadingRecords ? (
             <p className="empty-text">Loading records...</p>
-          ) : records.length === 0 ? (
+          ) : normalizedRecords.length === 0 ? (
             <p className="empty-text">No ECG records uploaded yet.</p>
           ) : (
             <div className="records-table-wrapper">
@@ -210,7 +463,7 @@ function Dashboard() {
                 </thead>
 
                 <tbody>
-                  {records.map((record) => (
+                  {normalizedRecords.map((record) => (
                     <tr key={record.id}>
                       <td>{record.id}</td>
 
@@ -230,7 +483,8 @@ function Dashboard() {
                       <td>{record.predicted_condition || "Not analyzed"}</td>
 
                       <td>
-                        {record.confidence
+                        {record.confidence !== undefined &&
+                        record.confidence !== null
                           ? `${Math.round(Number(record.confidence) * 100)}%`
                           : "N/A"}
                       </td>
@@ -243,6 +497,13 @@ function Dashboard() {
                           {loadingAnalyzeId === record.id
                             ? "Analyzing..."
                             : "Analyze"}
+                        </button>
+
+                        <button
+                          className="secondary-button"
+                          onClick={() => handleViewResult(record)}
+                        >
+                          View Result
                         </button>
 
                         <button
@@ -259,6 +520,84 @@ function Dashboard() {
             </div>
           )}
         </section>
+
+        {selectedRecord && (
+          <section className="result-card">
+            <div className="section-header">
+              <div>
+                <h3>Analysis Result</h3>
+                <p>Record ID: {selectedRecord.id || "N/A"}</p>
+              </div>
+
+              <div className="action-buttons">
+                <button onClick={handleDownloadReport}>Download Report</button>
+                <button className="secondary-button" onClick={handleShareReport}>
+                  Share / Export
+                </button>
+              </div>
+            </div>
+
+            <div className="result-grid">
+              <div className="result-box">
+                <span>Predicted Condition</span>
+                <strong>
+                  {selectedRecord.predicted_condition || "Not available"}
+                </strong>
+              </div>
+
+              <div className="result-box">
+                <span>Confidence</span>
+                <strong>
+                  {selectedRecord.confidence !== undefined &&
+                  selectedRecord.confidence !== null
+                    ? `${Math.round(Number(selectedRecord.confidence) * 100)}%`
+                    : "Not available"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="explanation-box">
+              <h4>Short Explanation</h4>
+              <p>
+                {selectedRecord.short_explanation ||
+                  "No short explanation is available yet."}
+              </p>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setShowDetails(!showDetails)}
+              >
+                {showDetails ? "Hide Detailed Explanation" : "Show Detailed Explanation"}
+              </button>
+
+              {showDetails && (
+                <div className="details-panel">
+                  <h4>Detailed Explanation</h4>
+                  <p>
+                    {selectedRecord.detailed_explanation ||
+                      "No detailed explanation is available yet."}
+                  </p>
+
+                  <h4>Explainable Interpretation</h4>
+                  <p>
+                    {selectedRecord.xai_explanation ||
+                      "Advanced explainable AI highlighting is not available yet."}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="signal-card">
+              <h4>ECG Signal Visualization</h4>
+              {renderMiniSignal(selectedRecord.signal_values)}
+            </div>
+
+            <div className="disclaimer-card">
+              <strong>Medical Disclaimer:</strong> {disclaimer}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
