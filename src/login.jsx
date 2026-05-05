@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import API from "./api";
 import heartImage from "./assets/new-auth-image.png";
 import "./App.css";
@@ -16,16 +16,23 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
+    setMessage("");
   };
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage("");
+
+    if (!formData.username || !formData.password) {
+      setMessage("Please enter username and password.");
+      return;
+    }
+
     setLoading(true);
+    setMessage("");
 
     try {
       const response = await API.post("/users/login/", formData);
@@ -35,8 +42,11 @@ function Login() {
 
       navigate("/dashboard");
     } catch (error) {
+      console.error("Login error:", error);
       setMessage(
-        error.response?.data?.error || "Login failed. Please check your username and password."
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Invalid credentials"
       );
     } finally {
       setLoading(false);
@@ -45,46 +55,59 @@ function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-image">
-          <img src={heartImage} alt="ECG heart" />
+      <div className="auth-shell">
+        <div className="auth-visual">
+          <div className="auth-image-card">
+            <img src={heartImage} alt="ECG illustration" className="auth-image" />
+          </div>
         </div>
 
-        <div className="auth-content">
-          <h1>ECG Analysis System</h1>
-          <p className="subtitle">Login to analyze ECG records and view results.</p>
+        <div className="auth-form-panel">
+          <div className="auth-form-content">
+            <h1 className="auth-title">ECG Analysis System</h1>
+            <p className="auth-subtitle">
+              Login to analyze ECG records and view results.
+            </p>
 
-          <form onSubmit={handleLogin}>
-            <label>Username</label>
-            <input
-              type="text"
-              name="username"
-              placeholder="Enter your username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-            />
+            <form onSubmit={handleSubmit} className="auth-form">
+              <div className="auth-field">
+                <label>Username</label>
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="Enter your username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="auth-input"
+                />
+              </div>
 
-            <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
+              <div className="auth-field">
+                <label>Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="auth-input"
+                />
+              </div>
 
-            {message && <p className="error-message">{message}</p>}
+              {message && <div className="auth-error">{message}</div>}
 
-            <button type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
-            </button>
-          </form>
+              <button type="submit" className="auth-button" disabled={loading}>
+                {loading ? "Logging in..." : "Login"}
+              </button>
+            </form>
 
-          <p className="switch-text">
-            Don't have an account? <Link to="/register">Register</Link>
-          </p>
+            <p className="auth-footer-text">
+              Don't have an account?{" "}
+              <Link to="/register" className="auth-link">
+                Register
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
