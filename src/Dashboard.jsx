@@ -165,6 +165,8 @@ function Dashboard() {
         record_id: recordId,
       });
 
+      console.log("Analyze response:", response.data);
+
       setMessage(response.data?.message || "ECG analyzed successfully.");
 
       const analyzedRecord = {
@@ -181,7 +183,12 @@ function Dashboard() {
         xai_explanation:
           response.data?.xai_explanation ||
           "Advanced explainable AI highlighting is not available for this analysis yet.",
-        signal_values: response.data?.signal_values || [],
+        signal_values:
+          response.data?.signal_values ||
+          response.data?.signal ||
+          response.data?.ecg_signal ||
+          response.data?.values ||
+          [],
       };
 
       setSelectedRecord(analyzedRecord);
@@ -207,6 +214,8 @@ function Dashboard() {
     try {
       const response = await API.get(`/ecg/result/${record.id}/`);
 
+      console.log("Result response:", response.data);
+
       setSelectedRecord({
         ...record,
         ...response.data,
@@ -223,7 +232,13 @@ function Dashboard() {
           response.data?.xai_explanation ||
           record.xai_explanation ||
           "Advanced explainable AI highlighting is not available for this analysis yet.",
-        signal_values: response.data?.signal_values || record.signal_values || [],
+        signal_values:
+          response.data?.signal_values ||
+          response.data?.signal ||
+          response.data?.ecg_signal ||
+          response.data?.values ||
+          record.signal_values ||
+          [],
       });
     } catch (error) {
       console.error("View result error:", error);
@@ -338,15 +353,17 @@ Disclaimer: ${disclaimer}`;
   const renderMiniSignal = (values) => {
     const signal = Array.isArray(values)
       ? values
+          .flat()
           .map((value) => Number(value))
           .filter((value) => Number.isFinite(value))
-          .slice(0, 300)
+          .slice(0, 500)
       : [];
 
-    if (signal.length === 0) {
+    if (signal.length < 2) {
       return (
         <div className="ecg-placeholder">
-          ECG signal visualization is not available for this record yet.
+          ECG signal visualization is not available for this record yet. Please
+          make sure the uploaded CSV contains numeric ECG signal values.
         </div>
       );
     }
@@ -358,15 +375,18 @@ Disclaimer: ${disclaimer}`;
     const points = signal
       .map((value, index) => {
         const x = (index / Math.max(signal.length - 1, 1)) * 100;
-        const y = 50 - ((value - min) / range - 0.5) * 70;
+        const normalized = (value - min) / range;
+        const y = 85 - normalized * 70;
         return `${x},${y}`;
       })
       .join(" ");
 
     return (
-      <svg className="ecg-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <polyline points={points} fill="none" strokeWidth="2" />
-      </svg>
+      <div className="ecg-chart-wrap">
+        <svg className="ecg-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polyline points={points} fill="none" strokeWidth="2.5" />
+        </svg>
+      </div>
     );
   };
 
