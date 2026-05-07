@@ -19,6 +19,7 @@ function Dashboard() {
   const [showDetails, setShowDetails] = useState(false);
   const [deviceMode, setDeviceMode] = useState(false);
   const [deviceText, setDeviceText] = useState("");
+  const [patientName, setPatientName] = useState("");
 
   const disclaimer =
     "This system is designed to support ECG understanding and education. It does not replace professional medical diagnosis. Please consult a qualified doctor for medical decisions.";
