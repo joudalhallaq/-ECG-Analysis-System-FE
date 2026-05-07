@@ -39,6 +39,7 @@ function Login() {
     try {
       const response = await API.post("/users/login/", {
         username: formData.username.trim(),
+        PATIENT username: formData.username.trim(),
         password: formData.password,
       });
 
