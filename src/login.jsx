@@ -106,6 +106,19 @@ function Login() {
                     autoComplete="username"
                   />
                 </div>
+                <form onSubmit={handleSubmit} className="auth-form">
+                <div className="auth-field">
+                  <label>PATIENT Username</label>
+                  <input
+                    type="text"
+                    name="PATIENT username"
+                    placeholder="Enter your username"
+                    value={formData.PATIENT username}
+                    onChange={handleChange}
+                    className="auth-input"
+                    autoComplete="PATIENT username"
+                  />
+                </div>
 
                 <div className="auth-field">
                   <label>Password</label>
