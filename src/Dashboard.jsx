@@ -11,6 +11,7 @@ function Dashboard() {
 
   const [records, setRecords] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [patientName, setPatientName] = useState("");
   const [message, setMessage] = useState("");
   const [loadingUpload, setLoadingUpload] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState(false);
@@ -19,7 +20,6 @@ function Dashboard() {
   const [showDetails, setShowDetails] = useState(false);
   const [deviceMode, setDeviceMode] = useState(false);
   const [deviceText, setDeviceText] = useState("");
-  const [patientName, setPatientName] = useState("");
 
   const disclaimer =
     "This system is designed to support ECG understanding and education. It does not replace professional medical diagnosis. Please consult a qualified doctor for medical decisions.";
@@ -84,6 +84,7 @@ function Dashboard() {
     const formData = new FormData();
     formData.append("user_id", userId);
     formData.append("ecg_file", selectedFile);
+    formData.append("patient_name", patientName);
 
     setLoadingUpload(true);
     setMessage("");
@@ -96,6 +97,7 @@ function Dashboard() {
       });
 
       setSelectedFile(null);
+      setPatientName("");
 
       const fileInput = document.getElementById("ecg-file-input");
       if (fileInput) fileInput.value = "";
@@ -136,11 +138,13 @@ function Dashboard() {
     try {
       const response = await API.post("/ecg/device-submit/", {
         user_id: userId,
+        patient_name: patientName,
         ecg_data: deviceText,
         source_type: "external_device",
       });
 
       setDeviceText("");
+      setPatientName("");
       setMessage(response.data?.message || "ECG data received successfully.");
       await fetchRecords();
     } catch (error) {
@@ -172,6 +176,7 @@ function Dashboard() {
 
       const analyzedRecord = {
         id: response.data?.record_id || recordId,
+        patient_name: response.data?.patient_name || "N/A",
         predicted_condition: response.data?.predicted_condition || "Unknown",
         confidence: response.data?.confidence,
         short_explanation:
@@ -221,6 +226,8 @@ function Dashboard() {
         ...record,
         ...response.data,
         id: response.data?.id || response.data?.record_id || record.id,
+        patient_name:
+          response.data?.patient_name || record.patient_name || "N/A",
         short_explanation:
           response.data?.short_explanation ||
           record.short_explanation ||
@@ -247,6 +254,7 @@ function Dashboard() {
       setSelectedRecord({
         ...record,
         id: record.id,
+        patient_name: record.patient_name || "N/A",
         short_explanation:
           record.short_explanation || "No short explanation is available yet.",
         detailed_explanation:
@@ -319,6 +327,7 @@ function Dashboard() {
     }
 
     const shareText = `ECG Analysis Result:
+Patient Name: ${selectedRecord.patient_name || "N/A"}
 Predicted Condition: ${selectedRecord.predicted_condition || "Not available"}
 Confidence: ${
       selectedRecord.confidence !== undefined && selectedRecord.confidence !== null
@@ -385,8 +394,7 @@ Disclaimer: ${disclaimer}`;
     const points = signal
       .map((value, index) => {
         const x = padding + (index / Math.max(signal.length - 1, 1)) * chartWidth;
-        const y =
-          height - padding - ((value - min) / range) * chartHeight;
+        const y = height - padding - ((value - min) / range) * chartHeight;
 
         return `${x},${y}`;
       })
@@ -501,6 +509,13 @@ Disclaimer: ${disclaimer}`;
           {!deviceMode ? (
             <form onSubmit={handleUpload} className="upload-form">
               <input
+                type="text"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+                placeholder="Enter patient name"
+              />
+
+              <input
                 id="ecg-file-input"
                 type="file"
                 onChange={handleFileChange}
@@ -515,6 +530,13 @@ Disclaimer: ${disclaimer}`;
               <p className="helper-text">
                 Paste ECG data sent from the associated device/application.
               </p>
+
+              <input
+                type="text"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+                placeholder="Enter patient name"
+              />
 
               <textarea
                 value={deviceText}
@@ -545,6 +567,7 @@ Disclaimer: ${disclaimer}`;
                 <thead>
                   <tr>
                     <th>ID</th>
+                    <th>Patient Name</th>
                     <th>File</th>
                     <th>Uploaded At</th>
                     <th>Prediction</th>
@@ -557,6 +580,8 @@ Disclaimer: ${disclaimer}`;
                   {normalizedRecords.map((record) => (
                     <tr key={record.id}>
                       <td>{record.id}</td>
+
+                      <td>{record.patient_name || "N/A"}</td>
 
                       <td>
                         {record.file_name ||
@@ -618,6 +643,7 @@ Disclaimer: ${disclaimer}`;
               <div>
                 <h3>Analysis Result</h3>
                 <p>Record ID: {selectedRecord.id || "N/A"}</p>
+                <p>Patient Name: {selectedRecord.patient_name || "N/A"}</p>
               </div>
 
               <div className="action-buttons">
